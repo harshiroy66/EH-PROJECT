@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Vulnerability Assessment | Cybersecurity Risk Scoring{% endblock %}
+{% block page_title %}Module 1: Vulnerability Tracking & Assessment{% endblock %}
+{% block breadcrumb %}Vulnerabilities{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+    <!-- Top Action Toolbar -->
+    <div class="card-cyber mb-4">
+        <div class="card-cyber-body py-3">
+            <div class="row g-3 align-items-center justify-content-between">
+                <!-- Search and Status Filter Form -->
+                <div class="col-md-8 col-12">
+                    <form method="GET" action="{{ url_for('vulnerabilities') }}" class="row g-2 align-items-center">
+                        <div class="col-md-6 col-12">
+                            <div class="input-group">
+                                <span class="input-group-text bg-transparent border-secondary text-muted"><i class="bi bi-search"></i></span>
+                                <input type="text" name="search" class="form-control form-cyber-control" placeholder="Search vulnerability, CVE, or asset..." value="{{ search }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-8">
+                            <select name="status" class="form-select form-cyber-control" onchange="this.form.submit()">
+                                <option value="">All Vulnerability Statuses</option>
+                                {% for st in statuses %}
+                                <option value="{{ st }}" {% if selected_status == st %}selected{% endif %}>{{ st }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 col-4">
+                            {% if search or selected_status %}
+                            <a href="{{ url_for('vulnerabilities') }}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                            {% else %}
+                            <button type="submit" class="btn btn-cyber-secondary btn-sm w-100">Filter</button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Log New Vulnerability Button -->
+                <div class="col-md-4 col-12 text-md-end">
+                    <button class="btn btn-cyber-primary" data-bs-toggle="modal" data-bs-target="#addVulnModal">
+                        <i class="bi bi-bug-fill me-1"></i> Log Vulnerability
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vulnerabilities Table -->
+    <div class="card-cyber">
+        <div class="card-cyber-header">
+            <h5><i class="bi bi-shield-slash text-warning"></i> Identified Security Vulnerabilities ({{ vulnerabilities|length }})</h5>
+            <span class="badge bg-secondary text-light">SQLite: vulnerabilities</span>
+        </div>
+        <div class="card-cyber-body p-0">
+            <div class="table-responsive">
+                <table class="table table-cyber mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Vulnerability Name & CVE</th>
+                            <th>Target Asset</th>
+                            <th>Severity (V)</th>
+                            <th>Status</th>
+                            <th>Created Date</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if vulnerabilities %}
+                            {% for vuln in vulnerabilities %}
+                            <tr>
+                                <td class="text-muted font-monospace">#{{ vuln.id }}</td>
+                                <td>
+                                    <div class="fw-bold text-white fs-6">{{ vuln.name }}</div>
+                                    <div class="text-muted small text-truncate" style="max-width: 280px;" title="{{ vuln.description }}">
+                                        {{ vuln.description or 'No extra description' }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="text-light fw-semibold">{{ vuln.asset_name }}</div>
+                                    <small class="badge bg-dark border border-secondary text-muted">{{ vuln.asset_type }} (Crit: {{ vuln.asset_criticality }})</small>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2" style="width: 140px;">
+                                        <div class="progress flex-grow-1" style="height: 6px; background-color: #2a3a5f;">
+                                            <div class="progress-bar {% if vuln.severity >= 75 %}bg-danger{% elif vuln.severity >= 50 %}bg-warning{% else %}bg-info{% endif %}" 
+                                                 role="progressbar" style="width: {{ vuln.severity }}%;"></div>
+                                        </div>
+                                        <span class="fw-bold small {% if vuln.severity >= 75 %}text-danger{% elif vuln.severity >= 50 %}text-warning{% else %}text-info{% endif %}">
+                                            {{ vuln.severity }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <!-- Quick Status Toggle Dropdown -->
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm dropdown-toggle py-1 px-2 {% if vuln.status == 'Open' %}btn-outline-danger{% elif vuln.status == 'Pending' %}btn-outline-warning{% else %}btn-outline-success{% endif %}" 
+                                                type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                            {% if vuln.status == 'Open' %}<i class="bi bi-circle-fill text-danger me-1"></i> Open
+                                            {% elif vuln.status == 'Pending' %}<i class="bi bi-clock-history text-warning me-1"></i> Pending
+                                            {% else %}<i class="bi bi-check-circle-fill text-success me-1"></i> Resolved{% endif %}
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-dark">
+                                            <li><span class="dropdown-header">Update Status</span></li>
+                                            <li>
+                                                <form method="POST" action="{{ url_for('toggle_vulnerability_status', vuln_id=vuln.id) }}">
+                                                    <input type="hidden" name="status" value="Open">
+                                                    <button type="submit" class="dropdown-item text-danger"><i class="bi bi-circle-fill me-2"></i> Mark Open</button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form method="POST" action="{{ url_for('toggle_vulnerability_status', vuln_id=vuln.id) }}">
+                                                    <input type="hidden" name="status" value="Pending">
+                                                    <button type="submit" class="dropdown-item text-warning"><i class="bi bi-clock-history me-2"></i> Mark Pending</button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form method="POST" action="{{ url_for('toggle_vulnerability_status', vuln_id=vuln.id) }}">
+                                                    <input type="hidden" name="status" value="Resolved">
+                                                    <button type="submit" class="dropdown-item text-success"><i class="bi bi-check-circle-fill me-2"></i> Mark Resolved</button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ vuln.created_at }}</small>
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('risk_scoring') }}?asset_id={{ vuln.asset_id }}" class="btn btn-sm btn-outline-success" title="Calculate Risk Score for this Asset">
+                                            <i class="bi bi-calculator"></i>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#editVulnModal{{ vuln.id }}" title="Edit">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteVulnModal{{ vuln.id }}" title="Delete">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- EDIT VULNERABILITY MODAL -->
+                            <div class="modal fade" id="editVulnModal{{ vuln.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content modal-cyber">
+                                        <div class="modal-header modal-cyber-header">
+                                            <h5 class="modal-title"><i class="bi bi-pencil-square text-info me-2"></i>Edit Vulnerability #{{ vuln.id }}</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form method="POST" action="{{ url_for('edit_vulnerability', vuln_id=vuln.id) }}">
+                                            <div class="modal-body p-4">
+                                                <div class="mb-3">
+                                                    <label class="form-cyber-label">Target Asset <span class="text-danger">*</span></label>
+                                                    <select name="asset_id" class="form-select form-cyber-control" required>
+                                                        {% for a in assets %}
+                                                        <option value="{{ a.id }}" {% if a.id == vuln.asset_id %}selected{% endif %}>{{ a.name }} ({{ a.asset_type }})</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-cyber-label">Vulnerability Name <span class="text-danger">*</span></label>
+                                                    <input type="text" name="name" class="form-control form-cyber-control" required value="{{ vuln.name }}">
+                                                </div>
+                                                <div class="row g-2 mb-3">
+                                                    <div class="col-md-6">
+                                                        <label class="form-cyber-label">Severity (V) [0 - 100] <span class="text-danger">*</span></label>
+                                                        <input type="number" name="severity" min="0" max="100" step="0.1" class="form-control form-cyber-control" required value="{{ vuln.severity }}">
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-cyber-label">Remediation Status <span class="text-danger">*</span></label>
+                                                        <select name="status" class="form-select form-cyber-control" required>
+                                                            <option value="Open" {% if vuln.status == 'Open' %}selected{% endif %}>Open</option>
+                                                            <option value="Pending" {% if vuln.status == 'Pending' %}selected{% endif %}>Pending</option>
+                                                            <option value="Resolved" {% if vuln.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-cyber-label">Vulnerability Description</label>
+                                                    <textarea name="description" class="form-control form-cyber-control" rows="3">{{ vuln.description }}</textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer modal-cyber-footer">
+                                                <button type="button" class="btn btn-cyber-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-cyber-primary">Update Vulnerability</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- DELETE CONFIRMATION MODAL -->
+                            <div class="modal fade" id="deleteVulnModal{{ vuln.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content modal-cyber border-danger">
+                                        <div class="modal-header modal-cyber-header bg-danger text-white">
+                                            <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Delete Vulnerability</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body p-4 text-center">
+                                            <i class="bi bi-trash3-fill text-danger fs-1 d-block mb-3"></i>
+                                            <h5 class="text-white mb-2">Delete "{{ vuln.name }}"?</h5>
+                                            <p class="text-muted small">Are you sure you want to remove this vulnerability record?</p>
+                                        </div>
+                                        <div class="modal-footer modal-cyber-footer justify-content-center">
+                                            <button type="button" class="btn btn-cyber-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form method="POST" action="{{ url_for('remove_vulnerability', vuln_id=vuln.id) }}">
+                                                <button type="submit" class="btn btn-danger">Confirm Delete</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <i class="bi bi-shield-check fs-1 d-block mb-2 text-success"></i>
+                                    <h5>No vulnerabilities recorded matching criteria.</h5>
+                                    <p class="small">Click "Log Vulnerability" to register security threats.</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- LOG NEW VULNERABILITY MODAL -->
+<div class="modal fade" id="addVulnModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-cyber">
+            <div class="modal-header modal-cyber-header">
+                <h5 class="modal-title"><i class="bi bi-bug-fill text-warning me-2"></i>Log New Security Vulnerability</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_vulnerability') }}">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-cyber-label">Affected Target Asset <span class="text-danger">*</span></label>
+                        <select name="asset_id" class="form-select form-cyber-control" required>
+                            <option value="" disabled selected>-- Select Asset --</option>
+                            {% for a in assets %}
+                            <option value="{{ a.id }}">{{ a.name }} ({{ a.asset_type }} | Criticality: {{ a.criticality }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-cyber-label">Vulnerability Name / CVE Identifier <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control form-cyber-control" placeholder="e.g. Remote Code Execution (CVE-2024-38077)" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-cyber-label">Vulnerability Severity (V) [0 - 100] <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" name="severity" min="0" max="100" step="0.1" class="form-control form-cyber-control" placeholder="e.g. 80" required>
+                                <span class="input-group-text bg-dark border-secondary text-muted">/100</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-cyber-label">Initial Status <span class="text-danger">*</span></label>
+                            <select name="status" class="form-select form-cyber-control" required>
+                                <option value="Open" selected>Open</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Resolved">Resolved</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-cyber-label">Technical Description & Proof of Concept</label>
+                        <textarea name="description" class="form-control form-cyber-control" rows="3" placeholder="Describe the vulnerability mechanics, vulnerable port, or impact..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer modal-cyber-footer">
+                    <button type="button" class="btn btn-cyber-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-cyber-primary"><i class="bi bi-save me-1"></i> Save Vulnerability</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

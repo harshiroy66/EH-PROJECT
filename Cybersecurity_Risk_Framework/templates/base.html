@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Cybersecurity Risk Scoring & Decision Support{% endblock %}</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    
+    <!-- Custom Cybersecurity Dark Theme -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside id="sidebar">
+        <div class="sidebar-brand">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-shield-shaded brand-icon"></i>
+                <div>
+                    <div class="brand-title">CYBER RISK</div>
+                    <div class="brand-subtitle">Decision Support Framework</div>
+                </div>
+            </div>
+        </div>
+
+        <ul class="sidebar-nav">
+            <li class="nav-section-title">Operational Core</li>
+            <li>
+                <a href="{{ url_for('dashboard') }}" class="nav-link-custom {% if active_page == 'dashboard' %}active{% endif %}">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('assets') }}" class="nav-link-custom {% if active_page == 'assets' %}active{% endif %}">
+                    <i class="bi bi-hdd-rack"></i> Asset Management
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('vulnerabilities') }}" class="nav-link-custom {% if active_page == 'vulnerabilities' %}active{% endif %}">
+                    <i class="bi bi-bug"></i> Vulnerability Assessment
+                </a>
+            </li>
+
+            <li class="nav-section-title">Risk Scoring Engine</li>
+            <li>
+                <a href="{{ url_for('risk_scoring') }}" class="nav-link-custom {% if active_page == 'risk_scoring' %}active{% endif %}">
+                    <i class="bi bi-calculator"></i> Risk Scoring
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('recommendations') }}" class="nav-link-custom {% if active_page == 'recommendations' %}active{% endif %}">
+                    <i class="bi bi-lightbulb"></i> Security Recommendations
+                </a>
+            </li>
+
+            <li class="nav-section-title">Monitoring & Governance</li>
+            <li>
+                <a href="{{ url_for('monitoring') }}" class="nav-link-custom {% if active_page == 'monitoring' %}active{% endif %}">
+                    <i class="bi bi-activity"></i> Security Monitoring
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('history') }}" class="nav-link-custom {% if active_page == 'history' %}active{% endif %}">
+                    <i class="bi bi-clock-history"></i> Risk History
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('reports') }}" class="nav-link-custom {% if active_page == 'reports' %}active{% endif %}">
+                    <i class="bi bi-file-earmark-pdf"></i> Reports
+                </a>
+            </li>
+
+            <li class="nav-section-title">Administration</li>
+            <li>
+                <a href="{{ url_for('settings') }}" class="nav-link-custom {% if active_page == 'settings' %}active{% endif %}">
+                    <i class="bi bi-gear"></i> Settings & Engine
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <div class="d-flex align-items-center justify-content-between text-muted">
+                <span class="d-flex align-items-center gap-1">
+                    <span class="badge bg-success p-1 rounded-circle"> </span>
+                    <small>System Online</small>
+                </span>
+                <small class="text-secondary">v2.4 LTS</small>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT WRAPPER -->
+    <div id="main-wrapper">
+        <!-- TOP HEADER -->
+        <header class="top-header">
+            <div class="page-title-area d-flex align-items-center gap-3">
+                <button class="btn btn-sm btn-outline-secondary d-lg-none" id="sidebarToggle" type="button">
+                    <i class="bi bi-list fs-5"></i>
+                </button>
+                <div>
+                    <h1>{% block page_title %}Security Command Center{% endblock %}</h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Framework</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">{% block breadcrumb %}Overview{% endblock %}</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <!-- Critical Alert Badge -->
+                {% set crit_count = global_metrics.get('critical_risk_assets', 0) %}
+                {% if crit_count > 0 %}
+                <a href="{{ url_for('monitoring') }}" class="badge badge-risk-critical text-decoration-none py-2 px-3">
+                    <i class="bi bi-exclamation-octagon-fill"></i> {{ crit_count }} Critical Risk Alert{% if crit_count > 1 %}s{% endif %}
+                </a>
+                {% endif %}
+
+                <!-- Quick Action Button -->
+                <a href="{{ url_for('risk_scoring') }}" class="btn btn-cyber-primary btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i> New Assessment
+                </a>
+            </div>
+        </header>
+
+        <!-- FLASH MESSAGES -->
+        <div class="container-fluid px-4 pt-3">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm" role="alert">
+                            {% if category == 'success' %}
+                                <i class="bi bi-check-circle-fill fs-5 text-success"></i>
+                            {% elif category == 'danger' %}
+                                <i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i>
+                            {% elif category == 'warning' %}
+                                <i class="bi bi-exclamation-circle-fill fs-5 text-warning"></i>
+                            {% else %}
+                                <i class="bi bi-info-circle-fill fs-5 text-info"></i>
+                            {% endif %}
+                            <div>{{ message }}</div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- MAIN BODY CONTENT -->
+        <main class="content-body">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <!-- Custom Dashboard Script -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
+    <script>
+        // Toggle mobile sidebar
+        const toggleBtn = document.getElementById("sidebarToggle");
+        const sidebar = document.getElementById("sidebar");
+        if (toggleBtn && sidebar) {
+            toggleBtn.addEventListener("click", () => {
+                sidebar.classList.toggle("show");
+            });
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

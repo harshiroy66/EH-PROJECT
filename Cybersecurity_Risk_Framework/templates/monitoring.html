@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Security Monitoring | Cybersecurity Framework{% endblock %}
+{% block page_title %}Module 4: Security Monitoring & Risk Posture{% endblock %}
+{% block breadcrumb %}Monitoring{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+    <!-- ALL 8 METRIC CARDS REQUIRED BY SECTION 7 -->
+    <div class="row g-3 mb-4">
+        <!-- 1. Total Assets -->
+        <div class="col-xl-3 col-md-6 col-12">
+            <div class="stat-card">
+                <div class="stat-title">Total Assets</div>
+                <div class="stat-value text-info">{{ metrics.total_assets }}</div>
+                <div class="stat-sub text-muted">Registered in Asset Inventory</div>
+            </div>
+        </div>
+
+        <!-- 2. Total Assessments -->
+        <div class="col-xl-3 col-md-6 col-12">
+            <div class="stat-card">
+                <div class="stat-title">Total Assessments</div>
+                <div class="stat-value text-cyan" style="color: #00f5d4;">{{ metrics.total_assessments }}</div>
+                <div class="stat-sub text-muted">Historical assessment logs</div>
+            </div>
+        </div>
+
+        <!-- 3. Total Vulnerabilities -->
+        <div class="col-xl-3 col-md-6 col-12">
+            <div class="stat-card">
+                <div class="stat-title">Total Vulnerabilities</div>
+                <div class="stat-value text-warning">{{ metrics.total_vulnerabilities }}</div>
+                <div class="stat-sub text-muted">Logged across all assets</div>
+            </div>
+        </div>
+
+        <!-- 4. Critical Risk Assets -->
+        <div class="col-xl-3 col-md-6 col-12">
+            <div class="stat-card border-danger">
+                <div class="stat-title text-danger">Critical Risk Assets</div>
+                <div class="stat-value text-danger">{{ metrics.critical_risk_assets }}</div>
+                <div class="stat-sub text-danger">Score &ge; 75/100</div>
+            </div>
+        </div>
+
+        <!-- 5. Open Vulnerabilities -->
+        <div class="col-xl-3 col-md-6 col-12">
+            <div class="stat-card">
+                <div class="stat-title text-danger">Open Vulnerabilities</div>
+                <div class="stat-value text-danger">{{ metrics.open_vulnerabilities }}</div>
+                <div class="stat-sub text-muted">Awaiting remediation</div>
+            </div>
+        </div>
+
+        <!-- 6. Pending Vulnerabilities -->
+        <div class="col-xl-3 col-md-6 col-12">
+            <div class="stat-card">
+                <div class="stat-title text-warning">Pending Vulnerabilities</div>
+                <div class="stat-value text-warning">{{ metrics.pending_vulnerabilities }}</div>
+                <div class="stat-sub text-muted">In patch validation</div>
+            </div>
+        </div>
+
+        <!-- 7. Resolved Vulnerabilities -->
+        <div class="col-xl-3 col-md-6 col-12">
+            <div class="stat-card">
+                <div class="stat-title text-success">Resolved Vulnerabilities</div>
+                <div class="stat-value text-success">{{ metrics.resolved_vulnerabilities }}</div>
+                <div class="stat-sub text-muted">Mitigated & verified</div>
+            </div>
+        </div>
+
+        <!-- 8. High Risk Assets -->
+        <div class="col-xl-3 col-md-6 col-12">
+            <div class="stat-card" style="border-color: #f97316;">
+                <div class="stat-title" style="color: #f97316;">High Risk Assets</div>
+                <div class="stat-value" style="color: #f97316;">{{ metrics.high_risk_assets }}</div>
+                <div class="stat-sub text-muted">Score 50 - 74/100</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHARTS SECTION: VULNERABILITY STATUS + HISTORICAL TREND -->
+    <div class="row g-3 mb-4">
+        <!-- Vulnerability Status Chart -->
+        <div class="col-lg-5 col-12">
+            <div class="card-cyber h-100">
+                <div class="card-cyber-header">
+                    <h5><i class="bi bi-bar-chart-fill text-warning"></i> Vulnerability Remediation Status</h5>
+                    <span class="badge bg-secondary">Current Pipeline</span>
+                </div>
+                <div class="card-cyber-body">
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="vulnStatusChart"
+                                data-open="{{ metrics.open_vulnerabilities }}"
+                                data-pending="{{ metrics.pending_vulnerabilities }}"
+                                data-resolved="{{ metrics.resolved_vulnerabilities }}">
+                        </canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historical Risk Trend Chart -->
+        <div class="col-lg-7 col-12">
+            <div class="card-cyber h-100">
+                <div class="card-cyber-header">
+                    <h5><i class="bi bi-graph-up-arrow text-cyan" style="color: #00f5d4;"></i> Longitudinal Risk Scores Over Time</h5>
+                    <a href="{{ url_for('history') }}" class="btn btn-outline-info btn-sm">Audit Deltas</a>
+                </div>
+                <div class="card-cyber-body">
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="historicalTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- UNRESOLVED HIGH & CRITICAL RISKS TABLE (SECTION 7 REQUIREMENT 10) -->
+    <div class="card-cyber mb-4">
+        <div class="card-cyber-header border-danger">
+            <h5 class="text-danger"><i class="bi bi-exclamation-octagon-fill"></i> Unresolved High & Critical Risks (Action Required)</h5>
+            <span class="badge bg-danger">{{ unresolved|length }} Active Threats</span>
+        </div>
+        <div class="card-cyber-body p-0">
+            <div class="table-responsive">
+                <table class="table table-cyber mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>Vulnerability</th>
+                            <th>Target Asset</th>
+                            <th>Type</th>
+                            <th>Severity</th>
+                            <th>Calculated Risk</th>
+                            <th>Remediation Status</th>
+                            <th class="text-end">Immediate Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if unresolved %}
+                            {% for item in unresolved %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold text-white">{{ item.vuln_name }}</div>
+                                    <small class="text-muted">Vuln ID #{{ item.vuln_id }}</small>
+                                </td>
+                                <td>
+                                    <span class="text-light fw-semibold">{{ item.asset_name }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-dark border border-secondary text-info">{{ item.asset_type }}</span>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-danger">{{ item.vuln_severity }}</span>
+                                    <small class="text-muted">/100</small>
+                                </td>
+                                <td>
+                                    {% if item.risk_score is not none %}
+                                        <span class="badge-risk {{ 'badge-risk-critical' if item.risk_level == 'Critical' else 'badge-risk-high' }}">
+                                            {{ item.risk_score }} [{{ item.risk_level }}]
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Uncalculated</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge {% if item.status == 'Open' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                        {{ item.status }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <form method="POST" action="{{ url_for('toggle_vulnerability_status', vuln_id=item.vuln_id) }}" class="d-inline">
+                                        <input type="hidden" name="status" value="Resolved">
+                                        <button type="submit" class="btn btn-sm btn-outline-success py-1">
+                                            <i class="bi bi-check2"></i> Mark Resolved
+                                        </button>
+                                    </form>
+                                    <a href="{{ url_for('risk_scoring') }}?asset_id={{ item.asset_id }}" class="btn btn-sm btn-cyber-primary py-1">
+                                        Re-Assess Risk
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-success">
+                                    <i class="bi bi-shield-check fs-2 d-block mb-1"></i>
+                                    <strong>No unresolved High or Critical risks detected!</strong> Excellent security posture.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- SYSTEM MONITORING & AUDIT LOGS -->
+    <div class="card-cyber">
+        <div class="card-cyber-header">
+            <h5><i class="bi bi-journal-check text-info"></i> Security Monitoring Activity Logs</h5>
+            <span class="badge bg-dark text-muted border border-secondary">SQLite: monitoring_logs</span>
+        </div>
+        <div class="card-cyber-body p-0">
+            <div class="table-responsive">
+                <table class="table table-cyber mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Severity</th>
+                            <th>Event Type</th>
+                            <th>Event Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if logs %}
+                            {% for log in logs %}
+                            <tr>
+                                <td class="text-muted font-monospace small" style="width: 180px;">{{ log.timestamp }}</td>
+                                <td>
+                                    <span class="badge {% if log.severity == 'CRITICAL' %}bg-danger{% elif log.severity == 'WARNING' %}bg-warning text-dark{% elif log.severity == 'SUCCESS' %}bg-success{% else %}bg-info text-dark{% endif %}">
+                                        {{ log.severity }}
+                                    </span>
+                                </td>
+                                <td class="fw-bold text-light">{{ log.event_type }}</td>
+                                <td class="text-secondary small">{{ log.description }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">No logs recorded.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

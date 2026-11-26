@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Cybersecurity Risk Scoring & Decision Support{% endblock %}
+{% block page_title %}Executive Cybersecurity Dashboard{% endblock %}
+{% block breadcrumb %}Overview{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+    <!-- CRITICAL ALERTS BANNER (If Critical Assets exist) -->
+    {% if metrics.critical_risk_assets > 0 %}
+    <div class="card-cyber mb-4 border-danger" style="background: linear-gradient(90deg, rgba(239, 68, 68, 0.15), rgba(17, 29, 64, 0.9));">
+        <div class="card-cyber-body py-3 d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-3 bg-danger text-white rounded-3 shadow">
+                    <i class="bi bi-shield-slash-fill fs-3"></i>
+                </div>
+                <div>
+                    <h5 class="text-danger fw-bold mb-1">
+                        <i class="bi bi-radioactive"></i> Critical Security Posture Detected!
+                    </h5>
+                    <p class="mb-0 text-light small">
+                        <strong>{{ metrics.critical_risk_assets }}</strong> asset(s) currently exceed the Critical Risk threshold (Score &ge; 75/100). Immediate remediation and isolation protocols recommended.
+                    </p>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('recommendations') }}?priority=Critical" class="btn btn-danger btn-sm px-3">
+                    <i class="bi bi-lightning-fill"></i> View Critical Action Items
+                </a>
+                <a href="{{ url_for('monitoring') }}" class="btn btn-cyber-secondary btn-sm">
+                    <i class="bi bi-activity"></i> Monitoring Details
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 1. STAT CARDS ROW -->
+    <div class="row g-3 mb-4">
+        <!-- Total Assets -->
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="stat-title">Total Registered Assets</div>
+                    <div class="stat-icon" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">
+                        <i class="bi bi-server"></i>
+                    </div>
+                </div>
+                <div class="stat-value">{{ metrics.total_assets }}</div>
+                <div class="stat-sub d-flex justify-content-between">
+                    <span>Active In SQLite DB</span>
+                    <a href="{{ url_for('assets') }}" class="text-info text-decoration-none small">Manage <i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Assessments -->
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="stat-title">Risk Assessments Run</div>
+                    <div class="stat-icon" style="background: rgba(0, 245, 212, 0.15); color: #00f5d4;">
+                        <i class="bi bi-clipboard2-pulse"></i>
+                    </div>
+                </div>
+                <div class="stat-value">{{ metrics.total_assessments }}</div>
+                <div class="stat-sub d-flex justify-content-between">
+                    <span>Calculated with $R=0.40V+...$</span>
+                    <a href="{{ url_for('risk_scoring') }}" class="text-cyan text-decoration-none small" style="color: #00f5d4;">Evaluate <i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vulnerabilities Breakdown -->
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="stat-title">Identified Vulnerabilities</div>
+                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                        <i class="bi bi-bug-fill"></i>
+                    </div>
+                </div>
+                <div class="stat-value">{{ metrics.total_vulnerabilities }}</div>
+                <div class="stat-sub d-flex gap-2">
+                    <span class="text-danger"><i class="bi bi-circle-fill" style="font-size: 6px;"></i> {{ metrics.open_vulnerabilities }} Open</span>
+                    <span class="text-warning"><i class="bi bi-circle-fill" style="font-size: 6px;"></i> {{ metrics.pending_vulnerabilities }} Pending</span>
+                    <span class="text-success"><i class="bi bi-circle-fill" style="font-size: 6px;"></i> {{ metrics.resolved_vulnerabilities }} Resolved</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Critical & High Threat Exposure -->
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="stat-title">High / Critical Risks</div>
+                    <div class="stat-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                </div>
+                <div class="stat-value text-danger">{{ metrics.unresolved_high_crit }}</div>
+                <div class="stat-sub d-flex justify-content-between">
+                    <span class="text-danger">{{ metrics.critical_risk_assets }} Critical</span>
+                    <span class="text-orange" style="color: #f97316;">{{ metrics.high_risk_assets }} High</span>
+                    <a href="{{ url_for('recommendations') }}" class="text-warning text-decoration-none small">Remediate <i class="bi bi-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. CHARTS ROW -->
+    <div class="row g-3 mb-4">
+        <!-- Risk Distribution Chart (Doughnut) -->
+        <div class="col-lg-4 col-md-12">
+            <div class="card-cyber h-100">
+                <div class="card-cyber-header">
+                    <h5><i class="bi bi-pie-chart-fill text-cyan" style="color: #00f5d4;"></i> Risk Distribution</h5>
+                    <span class="badge bg-secondary">Current Posture</span>
+                </div>
+                <div class="card-cyber-body d-flex flex-column align-items-center justify-content-center">
+                    <div style="position: relative; height: 240px; width: 100%;">
+                        <canvas id="riskDistributionChart" 
+                                data-low="{{ metrics.risk_distribution.Low }}"
+                                data-med="{{ metrics.risk_distribution.Medium }}"
+                                data-high="{{ metrics.risk_distribution.High }}"
+                                data-crit="{{ metrics.risk_distribution.Critical }}">
+                        </canvas>
+                    </div>
+                    <div class="d-flex justify-content-around w-100 mt-3 pt-2 border-top border-secondary small text-muted">
+                        <div class="text-center">
+                            <div class="fw-bold text-success">{{ metrics.risk_distribution.Low }}</div>
+                            <small>Low (0-24)</small>
+                        </div>
+                        <div class="text-center">
+                            <div class="fw-bold text-warning">{{ metrics.risk_distribution.Medium }}</div>
+                            <small>Medium (25-49)</small>
+                        </div>
+                        <div class="text-center">
+                            <div class="fw-bold text-orange" style="color: #f97316;">{{ metrics.risk_distribution.High }}</div>
+                            <small>High (50-74)</small>
+                        </div>
+                        <div class="text-center">
+                            <div class="fw-bold text-danger">{{ metrics.risk_distribution.Critical }}</div>
+                            <small>Critical (75-100)</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historical Risk Trend Chart (Line) -->
+        <div class="col-lg-8 col-md-12">
+            <div class="card-cyber h-100">
+                <div class="card-cyber-header">
+                    <h5><i class="bi bi-graph-up text-info"></i> Historical Risk Trend Analysis</h5>
+                    <a href="{{ url_for('history') }}" class="btn btn-outline-info btn-sm">Full History & Deltas</a>
+                </div>
+                <div class="card-cyber-body">
+                    <div style="position: relative; height: 270px; width: 100%;">
+                        <canvas id="historicalTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. RECENT ASSESSMENTS & ACTIVITY LOGS -->
+    <div class="row g-3">
+        <!-- Recent Assessments Table -->
+        <div class="col-lg-8 col-md-12">
+            <div class="card-cyber">
+                <div class="card-cyber-header">
+                    <h5><i class="bi bi-table text-primary"></i> Recent Risk Assessments</h5>
+                    <a href="{{ url_for('risk_scoring') }}" class="btn btn-cyber-secondary btn-sm">View All Assessments</a>
+                </div>
+                <div class="card-cyber-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-cyber mb-0 align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Asset</th>
+                                    <th>Vulnerability</th>
+                                    <th>Inputs (V, A, E, S)</th>
+                                    <th>Score</th>
+                                    <th>Risk Level</th>
+                                    <th>Trend</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if recent_assessments %}
+                                    {% for asm in recent_assessments %}
+                                    <tr>
+                                        <td>
+                                            <div class="fw-bold text-white">{{ asm.asset_name }}</div>
+                                            <small class="text-muted">{{ asm.asset_type }}</small>
+                                        </td>
+                                        <td>
+                                            <div class="text-light small text-truncate" style="max-width: 170px;">
+                                                {{ asm.vulnerability_name or 'General Audit' }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <small class="font-monospace text-secondary">
+                                                V:{{ asm.vulnerability_severity|int }} | A:{{ asm.asset_criticality|int }} | E:{{ asm.exposure|int }} | S:{{ asm.security_event_severity|int }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <span class="fw-bold fs-6">{{ asm.risk_score }}</span>
+                                            <small class="text-muted">/100</small>
+                                        </td>
+                                        <td>
+                                            {% if asm.risk_level == 'Critical' %}
+                                                <span class="badge-risk badge-risk-critical"><i class="bi bi-radioactive"></i> Critical</span>
+                                            {% elif asm.risk_level == 'High' %}
+                                                <span class="badge-risk badge-risk-high"><i class="bi bi-exclamation-triangle"></i> High</span>
+                                            {% elif asm.risk_level == 'Medium' %}
+                                                <span class="badge-risk badge-risk-medium"><i class="bi bi-shield-exclamation"></i> Medium</span>
+                                            {% else %}
+                                                <span class="badge-risk badge-risk-low"><i class="bi bi-shield-check"></i> Low</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if asm.trend == 'Decreased' %}
+                                                <span class="badge badge-trend-decreased"><i class="bi bi-arrow-down"></i> -{{ asm.score_difference|abs }}</span>
+                                            {% elif asm.trend == 'Increased' %}
+                                                <span class="badge badge-trend-increased"><i class="bi bi-arrow-up"></i> +{{ asm.score_difference|abs }}</span>
+                                            {% elif asm.trend == 'Unchanged' %}
+                                                <span class="badge badge-trend-unchanged"><i class="bi bi-dash"></i> 0</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary text-light">Initial</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="{{ url_for('report_view', assessment_id=asm.id) }}" class="btn btn-sm btn-outline-light py-0 px-2" title="View Full Report">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{{ url_for('download_report_pdf', assessment_id=asm.id) }}" class="btn btn-sm btn-outline-danger py-0 px-2" title="Download PDF">
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            <i class="bi bi-inbox fs-3 d-block mb-2"></i> No risk assessments conducted yet. Run your first assessment in Risk Scoring!
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity Feed / Monitoring Logs -->
+        <div class="col-lg-4 col-md-12">
+            <div class="card-cyber">
+                <div class="card-cyber-header">
+                    <h5><i class="bi bi-journal-text text-cyan" style="color: #00f5d4;"></i> Security Activity Feed</h5>
+                    <span class="badge bg-dark border border-secondary text-muted">Live Stream</span>
+                </div>
+                <div class="card-cyber-body">
+                    {% if recent_logs %}
+                    <ul class="timeline-list">
+                        {% for log in recent_logs %}
+                        <li class="timeline-item">
+                            <span class="timeline-dot {% if log.severity == 'CRITICAL' %}critical{% elif log.severity == 'WARNING' %}warning{% elif log.severity == 'SUCCESS' %}success{% endif %}"></span>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold small {% if log.severity == 'CRITICAL' %}text-danger{% elif log.severity == 'WARNING' %}text-warning{% elif log.severity == 'SUCCESS' %}text-success{% else %}text-info{% endif %}">
+                                    {{ log.event_type }}
+                                </span>
+                                <small class="text-muted" style="font-size: 0.72rem;">{{ log.timestamp }}</small>
+                            </div>
+                            <div class="text-light small">{{ log.description }}</div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted small mb-0">No activity logged yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

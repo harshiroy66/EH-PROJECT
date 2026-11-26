@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Assessment Reports | Cybersecurity Framework{% endblock %}
+{% block page_title %}Security Reports & Compliance Audits{% endblock %}
+{% block breadcrumb %}Reports{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+    <!-- TOP BANNER WITH CONSOLIDATED EXPORT -->
+    <div class="card-cyber mb-4">
+        <div class="card-cyber-body py-3">
+            <div class="row g-3 align-items-center justify-content-between">
+                <div class="col-lg-8 col-12">
+                    <h5 class="text-white fw-bold mb-1">
+                        <i class="bi bi-file-earmark-pdf-fill text-danger"></i> Formal Cybersecurity Assessment Reports
+                    </h5>
+                    <p class="text-muted small mb-0">
+                        Generate official audit deliverables containing asset inventory profiles, mathematical scoring derivations ($R=0.40V+0.25A+0.20E+0.15S$), prioritized recommendations, and examiner sign-offs.
+                    </p>
+                </div>
+                <div class="col-lg-4 col-12 text-lg-end">
+                    <a href="{{ url_for('download_all_audit_pdf') }}" class="btn btn-cyber-primary">
+                        <i class="bi bi-cloud-arrow-down-fill me-1"></i> Download Full Executive Audit PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTER TOOLBAR -->
+    <div class="card-cyber mb-4">
+        <div class="card-cyber-body py-2">
+            <form method="GET" action="{{ url_for('reports') }}" class="row g-2 align-items-center">
+                <div class="col-md-4 col-6">
+                    <select name="asset_id" class="form-select form-cyber-control form-select-sm" onchange="this.form.submit()">
+                        <option value="">All Assets</option>
+                        {% for a in assets %}
+                        <option value="{{ a.id }}" {% if selected_asset == a.id %}selected{% endif %}>{{ a.name }} ({{ a.asset_type }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 col-6">
+                    <select name="risk_level" class="form-select form-cyber-control form-select-sm" onchange="this.form.submit()">
+                        <option value="">All Risk Classifications</option>
+                        <option value="Critical" {% if selected_level == 'Critical' %}selected{% endif %}>Critical Risk (75-100)</option>
+                        <option value="High" {% if selected_level == 'High' %}selected{% endif %}>High Risk (50-74)</option>
+                        <option value="Medium" {% if selected_level == 'Medium' %}selected{% endif %}>Medium Risk (25-49)</option>
+                        <option value="Low" {% if selected_level == 'Low' %}selected{% endif %}>Low Risk (0-24)</option>
+                    </select>
+                </div>
+                <div class="col-md-2 col-6">
+                    <input type="text" class="form-control form-cyber-control form-control-sm" placeholder="Filter..." data-table-filter="reportsTable">
+                </div>
+                <div class="col-md-2 col-6 text-end">
+                    {% if selected_asset or selected_level %}
+                    <a href="{{ url_for('reports') }}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- REPORTS REPOSITORY TABLE -->
+    <div class="card-cyber">
+        <div class="card-cyber-header">
+            <h5><i class="bi bi-folder-check text-info"></i> Security Assessment Reports ({{ assessments|length }})</h5>
+            <span class="badge bg-secondary">Official PDF Exporter</span>
+        </div>
+        <div class="card-cyber-body p-0">
+            <div class="table-responsive">
+                <table class="table table-cyber mb-0 align-middle" id="reportsTable">
+                    <thead>
+                        <tr>
+                            <th>Report ID</th>
+                            <th>Assessment Date</th>
+                            <th>Target Asset</th>
+                            <th>Assessed Vulnerability</th>
+                            <th>Risk Score</th>
+                            <th>Classification</th>
+                            <th>Historical Trend</th>
+                            <th class="text-end">Export & Review</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if assessments %}
+                            {% for asm in assessments %}
+                            <tr>
+                                <td class="font-monospace text-info fw-bold">
+                                    SEC-ASM-{{ "%04d"|format(asm.id) }}
+                                </td>
+                                <td>
+                                    <small class="text-light">{{ asm.assessment_date }}</small>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-white">{{ asm.asset_name }}</div>
+                                    <small class="text-muted">{{ asm.asset_type }} (Crit: {{ asm.asset_criticality }})</small>
+                                </td>
+                                <td>
+                                    <div class="text-light small text-truncate" style="max-width: 200px;">
+                                        {{ asm.vulnerability_name or 'General Security Audit' }}
+                                    </div>
+                                    <small class="text-secondary">Sev: {{ asm.vulnerability_severity }}</small>
+                                </td>
+                                <td>
+                                    <span class="fw-bold fs-6">{{ asm.risk_score }}</span>
+                                    <small class="text-muted">/100</small>
+                                </td>
+                                <td>
+                                    {% if asm.risk_level == 'Critical' %}
+                                        <span class="badge-risk badge-risk-critical"><i class="bi bi-radioactive"></i> Critical</span>
+                                    {% elif asm.risk_level == 'High' %}
+                                        <span class="badge-risk badge-risk-high"><i class="bi bi-exclamation-triangle"></i> High</span>
+                                    {% elif asm.risk_level == 'Medium' %}
+                                        <span class="badge-risk badge-risk-medium"><i class="bi bi-shield-exclamation"></i> Medium</span>
+                                    {% else %}
+                                        <span class="badge-risk badge-risk-low"><i class="bi bi-shield-check"></i> Low</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if asm.trend == 'Decreased' %}
+                                        <span class="badge badge-trend-decreased"><i class="bi bi-arrow-down"></i> -{{ asm.score_difference|abs }}</span>
+                                    {% elif asm.trend == 'Increased' %}
+                                        <span class="badge badge-trend-increased"><i class="bi bi-arrow-up"></i> +{{ asm.score_difference|abs }}</span>
+                                    {% elif asm.trend == 'Unchanged' %}
+                                        <span class="badge badge-trend-unchanged">0</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary text-light">Initial</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('report_view', assessment_id=asm.id) }}" class="btn btn-sm btn-outline-info" title="View Full Report">
+                                            <i class="bi bi-eye me-1"></i> View
+                                        </a>
+                                        <a href="{{ url_for('download_report_pdf', assessment_id=asm.id) }}" class="btn btn-sm btn-danger" title="Download Official PDF">
+                                            <i class="bi bi-file-earmark-pdf me-1"></i> PDF
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="bi bi-file-earmark-x fs-1 d-block mb-2"></i>
+                                    <h5>No assessment reports available.</h5>
+                                    <p class="small">Run an assessment in Risk Scoring to generate reports.</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

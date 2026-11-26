@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Settings & Engine Utilities | Cybersecurity Framework{% endblock %}
+{% block page_title %}Settings & Risk Engine Architecture{% endblock %}
+{% block breadcrumb %}Settings{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+    <div class="row g-4">
+        
+        <!-- LEFT: FORMULA SPECIFICATION & RISK CLASSIFICATION REFERENCE -->
+        <div class="col-lg-7 col-12">
+            
+            <!-- Mathematical Risk Model Card -->
+            <div class="card-cyber mb-4">
+                <div class="card-cyber-header">
+                    <h5><i class="bi bi-cpu text-cyan" style="color: #00f5d4;"></i> Exact Risk Scoring Formula Specification</h5>
+                    <span class="badge bg-secondary">Academic Baseline</span>
+                </div>
+                <div class="card-cyber-body">
+                    <p class="text-muted small">
+                        The automated risk engine executes the following standardized weighted linear regression equation to compute the overall risk score:
+                    </p>
+
+                    <div class="formula-box text-center py-3 my-3">
+                        <div class="formula-math fs-4">
+                            R = 0.40(V) + 0.25(A) + 0.20(E) + 0.15(S)
+                        </div>
+                    </div>
+
+                    <table class="table table-cyber small mb-0">
+                        <thead>
+                            <tr>
+                                <th>Variable</th>
+                                <th>Factor Description</th>
+                                <th>Weight</th>
+                                <th>Permitted Range</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="fw-bold font-monospace text-info">V</td>
+                                <td>Vulnerability Severity</td>
+                                <td class="fw-bold">40% (0.40)</td>
+                                <td>0 &ndash; 100</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold font-monospace text-info">A</td>
+                                <td>Asset Criticality</td>
+                                <td class="fw-bold">25% (0.25)</td>
+                                <td>0 &ndash; 100</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold font-monospace text-info">E</td>
+                                <td>Exposure Level</td>
+                                <td class="fw-bold">20% (0.20)</td>
+                                <td>0 &ndash; 100</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold font-monospace text-info">S</td>
+                                <td>Security Event Severity</td>
+                                <td class="fw-bold">15% (0.15)</td>
+                                <td>0 &ndash; 100</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Risk Classification Tiers Matrix -->
+            <div class="card-cyber mb-4">
+                <div class="card-cyber-header">
+                    <h5><i class="bi bi-speedometer text-warning"></i> Risk Classification Tiers</h5>
+                    <span class="badge bg-secondary">0 &ndash; 100 Scale</span>
+                </div>
+                <div class="card-cyber-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-cyber mb-0 align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Score Range</th>
+                                    <th>Classification</th>
+                                    <th>Posture Definition</th>
+                                    <th>Required Response Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-monospace fw-bold text-success">0 &ndash; 24</td>
+                                    <td><span class="badge-risk badge-risk-low">Low Risk</span></td>
+                                    <td class="small text-muted">Negligible or contained vulnerability</td>
+                                    <td class="small text-light">Routine security monitoring & updates</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-monospace fw-bold text-warning">25 &ndash; 49</td>
+                                    <td><span class="badge-risk badge-risk-medium">Medium Risk</span></td>
+                                    <td class="small text-muted">Moderate operational threat profile</td>
+                                    <td class="small text-light">Apply patches & review permissions</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-monospace fw-bold text-orange" style="color: #f97316;">50 &ndash; 74</td>
+                                    <td><span class="badge-risk badge-risk-high">High Risk</span></td>
+                                    <td class="small text-muted">Elevated exposure with potential breach</td>
+                                    <td class="small text-light">Prioritize remediation & review network auth</td>
+                                </tr>
+                                <tr>
+                                    <td class="font-monospace fw-bold text-danger">75 &ndash; 100</td>
+                                    <td><span class="badge-risk badge-risk-critical">Critical Risk</span></td>
+                                    <td class="small text-muted">Severe active or easily exploitable flaw</td>
+                                    <td class="small text-light">Escalate to admin, immediate remediation & isolation</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT: DATABASE MANAGEMENT & SAMPLE DATA SEEDER -->
+        <div class="col-lg-5 col-12">
+            
+            <!-- SQLite Database Status -->
+            <div class="card-cyber mb-4">
+                <div class="card-cyber-header">
+                    <h5><i class="bi bi-database-fill-gear text-info"></i> SQLite Database Management</h5>
+                    <span class="badge bg-success">Connected</span>
+                </div>
+                <div class="card-cyber-body">
+                    <div class="d-flex align-items-center justify-content-between mb-3 p-3 rounded" style="background: rgba(11, 19, 43, 0.6); border: 1px solid #2a3a5f;">
+                        <div>
+                            <div class="text-white fw-bold">cybersecurity.db</div>
+                            <small class="text-muted">Local relational SQLite database</small>
+                        </div>
+                        <i class="bi bi-database-check fs-2 text-info"></i>
+                    </div>
+
+                    <h6 class="text-light fw-bold mb-2">Relational Schema Tables:</h6>
+                    <ul class="list-group list-group-flush bg-transparent mb-4">
+                        <li class="list-group-item bg-transparent text-light border-secondary d-flex justify-content-between align-items-center px-0">
+                            <span><i class="bi bi-table text-cyan me-2"></i> assets</span>
+                            <span class="badge bg-secondary font-monospace">{{ global_metrics.total_assets }} rows</span>
+                        </li>
+                        <li class="list-group-item bg-transparent text-light border-secondary d-flex justify-content-between align-items-center px-0">
+                            <span><i class="bi bi-table text-cyan me-2"></i> vulnerabilities</span>
+                            <span class="badge bg-secondary font-monospace">{{ global_metrics.total_vulnerabilities }} rows</span>
+                        </li>
+                        <li class="list-group-item bg-transparent text-light border-secondary d-flex justify-content-between align-items-center px-0">
+                            <span><i class="bi bi-table text-cyan me-2"></i> assessments</span>
+                            <span class="badge bg-secondary font-monospace">{{ global_metrics.total_assessments }} rows</span>
+                        </li>
+                        <li class="list-group-item bg-transparent text-light border-secondary d-flex justify-content-between align-items-center px-0">
+                            <span><i class="bi bi-table text-cyan me-2"></i> recommendations</span>
+                            <span class="badge bg-secondary font-monospace">Auto-linked</span>
+                        </li>
+                        <li class="list-group-item bg-transparent text-light border-secondary d-flex justify-content-between align-items-center px-0">
+                            <span><i class="bi bi-table text-cyan me-2"></i> risk_history</span>
+                            <span class="badge bg-secondary font-monospace">Audit delta</span>
+                        </li>
+                        <li class="list-group-item bg-transparent text-light border-secondary d-flex justify-content-between align-items-center px-0">
+                            <span><i class="bi bi-table text-cyan me-2"></i> monitoring_logs</span>
+                            <span class="badge bg-secondary font-monospace">Event stream</span>
+                        </li>
+                    </ul>
+
+                    <!-- Reseed Demo Data Button -->
+                    <div class="p-3 rounded border border-warning bg-warning bg-opacity-10 mb-3">
+                        <h6 class="text-warning fw-bold mb-1"><i class="bi bi-arrow-repeat me-1"></i> Reseed Test & Verification Data</h6>
+                        <p class="text-muted small mb-3">
+                            Clears existing records and populates standard sample assets (including Server A baseline score 77.5 and follow-up 45.0 with &Delta; -32.5).
+                        </p>
+                        <form method="POST" action="{{ url_for('reseed_demo_data') }}" onsubmit="return confirm('Are you sure you want to reset and reseed the sample database?');">
+                            <button type="submit" class="btn btn-warning w-100 btn-sm text-dark fw-bold">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset & Reseed Sample Data
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Verification Test Case Reference (Section 14) -->
+            <div class="card-cyber">
+                <div class="card-cyber-header">
+                    <h5><i class="bi bi-check-circle-fill text-success"></i> Verification Sample Test Case</h5>
+                    <span class="badge bg-dark border border-secondary text-success">Section 14 Spec</span>
+                </div>
+                <div class="card-cyber-body small">
+                    <p class="text-muted mb-2">Built-in test scenario verifying formula precision:</p>
+                    <ul class="text-light ps-3 mb-2">
+                        <li><strong>Asset Name:</strong> Server A (Server)</li>
+                        <li><strong>Asset Criticality (A):</strong> 90</li>
+                        <li><strong>Vulnerability Severity (V):</strong> 80</li>
+                        <li><strong>Exposure (E):</strong> 70</li>
+                        <li><strong>Security Event Severity (S):</strong> 60</li>
+                    </ul>
+                    <div class="p-2 bg-dark rounded border border-secondary font-monospace text-cyan mb-2" style="color: #00f5d4;">
+                        R = 0.40(80) + 0.25(90) + 0.20(70) + 0.15(60)<br>
+                        R = 32 + 22.5 + 14 + 9 = 77.5<br>
+                        Classification: CRITICAL RISK
+                    </div>
+                    <div class="text-muted">
+                        Follow-up test score: 45.0 &rarr; &Delta;: -32.5 (&ldquo;Risk Decreased&rdquo;).
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

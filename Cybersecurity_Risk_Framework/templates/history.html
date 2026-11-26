@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Risk History & Deltas | Cybersecurity Framework{% endblock %}
+{% block page_title %}Module 4: Risk History & Longitudinal Trend Analysis{% endblock %}
+{% block breadcrumb %}Risk History{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+    <!-- HISTORICAL COMPARISON ARCHITECTURE CALLOUT -->
+    <div class="card-cyber mb-4" style="background: linear-gradient(135deg, rgba(11, 19, 43, 0.95), rgba(28, 37, 65, 0.95));">
+        <div class="card-cyber-body py-3">
+            <div class="row align-items-center">
+                <div class="col-lg-8 col-12">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge bg-primary text-white">Continuous Audit Trail</span>
+                        <h5 class="text-white mb-0 fw-bold">Longitudinal Asset Risk Progression</h5>
+                    </div>
+                    <p class="text-muted small mb-0">
+                        Tracks risk delta (<span class="font-monospace">&Delta; = Current - Previous</span>) for each asset. Older assessment records are strictly preserved to ensure complete audit fidelity.
+                    </p>
+                </div>
+                <div class="col-lg-4 col-12 text-lg-end mt-2 mt-lg-0">
+                    <span class="badge badge-trend-decreased px-3 py-2 me-1"><i class="bi bi-arrow-down"></i> Decreased (Mitigated)</span>
+                    <span class="badge badge-trend-increased px-3 py-2"><i class="bi bi-arrow-up"></i> Increased (Escalated)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter by Asset Toolbar -->
+    <div class="card-cyber mb-4">
+        <div class="card-cyber-body py-2">
+            <form method="GET" action="{{ url_for('history') }}" class="row g-2 align-items-center">
+                <div class="col-md-5 col-8">
+                    <select name="asset_id" class="form-select form-cyber-control form-select-sm" onchange="this.form.submit()">
+                        <option value="">All Assets Progression</option>
+                        {% for a in assets %}
+                        <option value="{{ a.id }}" {% if selected_asset == a.id %}selected{% endif %}>
+                            {{ a.name }} ({{ a.asset_type }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 col-4">
+                    {% if selected_asset %}
+                    <a href="{{ url_for('history') }}" class="btn btn-outline-secondary btn-sm">Clear Filter</a>
+                    {% endif %}
+                </div>
+                <div class="col-md-3 col-12 text-md-end">
+                    <span class="text-muted small">Total Records: <strong>{{ records|length }}</strong></span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- History Comparison Table -->
+    <div class="card-cyber">
+        <div class="card-cyber-header">
+            <h5><i class="bi bi-clock-history text-cyan" style="color: #00f5d4;"></i> Historical Comparative Assessments</h5>
+            <span class="badge bg-secondary">SQLite: risk_history</span>
+        </div>
+        <div class="card-cyber-body p-0">
+            <div class="table-responsive">
+                <table class="table table-cyber mb-0 align-middle">
+                    <thead>
+                        <tr>
+                            <th>Audit ID</th>
+                            <th>Target Asset</th>
+                            <th>Recorded Date</th>
+                            <th>Previous Score</th>
+                            <th>Current Score</th>
+                            <th>Score Difference (&Delta;)</th>
+                            <th>Trend Classification</th>
+                            <th>Current Tier</th>
+                            <th class="text-end">Report</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if records %}
+                            {% for rec in records %}
+                            <tr>
+                                <td class="text-muted font-monospace">#{{ rec.id }}</td>
+                                <td>
+                                    <div class="fw-bold text-white">{{ rec.asset_name }}</div>
+                                    <small class="text-muted">{{ rec.asset_type }}</small>
+                                </td>
+                                <td>
+                                    <small class="text-light">{{ rec.recorded_at }}</small>
+                                </td>
+                                <td>
+                                    {% if rec.previous_score is not none %}
+                                        <span class="fw-bold text-muted">{{ rec.previous_score }}</span>
+                                        <small class="text-secondary">/100</small>
+                                    {% else %}
+                                        <span class="badge bg-dark border border-secondary text-muted">Baseline</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="fw-bold fs-6 text-white">{{ rec.current_score }}</span>
+                                    <small class="text-muted">/100</small>
+                                </td>
+                                <td>
+                                    {% if rec.score_difference is not none %}
+                                        <span class="fw-bold font-monospace {% if rec.score_difference < 0 %}text-success{% elif rec.score_difference > 0 %}text-danger{% else %}text-muted{% endif %}">
+                                            {% if rec.score_difference > 0 %}+{% endif %}{{ rec.score_difference }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">&mdash;</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if rec.trend == 'Decreased' %}
+                                        <span class="badge badge-trend-decreased py-1 px-2">
+                                            <i class="bi bi-arrow-down-circle-fill me-1"></i> Risk Decreased
+                                        </span>
+                                    {% elif rec.trend == 'Increased' %}
+                                        <span class="badge badge-trend-increased py-1 px-2">
+                                            <i class="bi bi-arrow-up-circle-fill me-1"></i> Risk Increased
+                                        </span>
+                                    {% elif rec.trend == 'Unchanged' %}
+                                        <span class="badge badge-trend-unchanged py-1 px-2">
+                                            <i class="bi bi-dash-circle-fill me-1"></i> Risk Unchanged
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary text-light py-1 px-2">
+                                            <i class="bi bi-flag-fill me-1"></i> Initial Assessment
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if rec.risk_level == 'Critical' %}
+                                        <span class="badge-risk badge-risk-critical">Critical</span>
+                                    {% elif rec.risk_level == 'High' %}
+                                        <span class="badge-risk badge-risk-high">High</span>
+                                    {% elif rec.risk_level == 'Medium' %}
+                                        <span class="badge-risk badge-risk-medium">Medium</span>
+                                    {% else %}
+                                        <span class="badge-risk badge-risk-low">Low</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('report_view', assessment_id=rec.assessment_id) }}" class="btn btn-sm btn-outline-info py-0 px-2" title="View Full Report">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('download_report_pdf', assessment_id=rec.assessment_id) }}" class="btn btn-sm btn-outline-danger py-0 px-2" title="Download PDF">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="9" class="text-center py-5 text-muted">
+                                    <i class="bi bi-clock-history fs-1 d-block mb-2"></i>
+                                    <h5>No history records found.</h5>
+                                    <p class="small">Perform risk assessments to generate historical comparative records.</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

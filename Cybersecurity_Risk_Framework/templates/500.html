@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}500 - System Error | Cybersecurity Framework{% endblock %}
+{% block page_title %}Internal Server Error{% endblock %}
+{% block breadcrumb %}500 Error{% endblock %}
+
+{% block content %}
+<div class="container text-center py-5">
+    <div class="card-cyber p-5 mx-auto" style="max-width: 600px;">
+        <i class="bi bi-exclamation-triangle-fill text-warning display-1 mb-3"></i>
+        <h2 class="text-white fw-bold">500 - Internal Server Error</h2>
+        <p class="text-muted">An unexpected system condition was encountered while processing the risk assessment.</p>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-cyber-primary mt-3">
+            <i class="bi bi-arrow-repeat me-1"></i> Return to Safety (Dashboard)
+        </a>
+    </div>
+</div>
+{% endblock %}

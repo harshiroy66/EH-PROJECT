@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block title %}Asset Management | Cybersecurity Risk Scoring{% endblock %}
+{% block page_title %}Module 1: Asset Inventory & Management{% endblock %}
+{% block breadcrumb %}Asset Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+    <!-- Top Action Toolbar -->
+    <div class="card-cyber mb-4">
+        <div class="card-cyber-body py-3">
+            <div class="row g-3 align-items-center justify-content-between">
+                <!-- Search and Type Filter Form -->
+                <div class="col-md-8 col-12">
+                    <form method="GET" action="{{ url_for('assets') }}" class="row g-2 align-items-center">
+                        <div class="col-md-6 col-12">
+                            <div class="input-group">
+                                <span class="input-group-text bg-transparent border-secondary text-muted"><i class="bi bi-search"></i></span>
+                                <input type="text" name="search" class="form-control form-cyber-control" placeholder="Search by asset name or description..." value="{{ search }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-8">
+                            <select name="type" class="form-select form-cyber-control" onchange="this.form.submit()">
+                                <option value="">All Asset Types</option>
+                                {% for atype in asset_types %}
+                                <option value="{{ atype }}" {% if selected_type == atype %}selected{% endif %}>{{ atype }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 col-4">
+                            {% if search or selected_type %}
+                            <a href="{{ url_for('assets') }}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                            {% else %}
+                            <button type="submit" class="btn btn-cyber-secondary btn-sm w-100">Filter</button>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Add Asset Button -->
+                <div class="col-md-4 col-12 text-md-end">
+                    <button class="btn btn-cyber-primary" data-bs-toggle="modal" data-bs-target="#addAssetModal">
+                        <i class="bi bi-plus-lg me-1"></i> Register New Asset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assets Inventory Table -->
+    <div class="card-cyber">
+        <div class="card-cyber-header">
+            <h5><i class="bi bi-hdd-network text-info"></i> Registered Information Technology Assets ({{ assets|length }})</h5>
+            <span class="badge bg-secondary text-light">SQLite: assets</span>
+        </div>
+        <div class="card-cyber-body p-0">
+            <div class="table-responsive">
+                <table class="table table-cyber mb-0 align-middle" id="assetsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Asset Name</th>
+                            <th>Asset Type</th>
+                            <th>Description</th>
+                            <th>Criticality (A)</th>
+                            <th>Vulns</th>
+                            <th>Latest Risk</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if assets %}
+                            {% for asset in assets %}
+                            <tr>
+                                <td class="text-muted font-monospace">#{{ asset.id }}</td>
+                                <td>
+                                    <div class="fw-bold text-white fs-6">{{ asset.name }}</div>
+                                    <small class="text-muted">Registered: {{ asset.created_at }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-dark border border-secondary text-info px-2 py-1">
+                                        {% if asset.asset_type == 'Server' %}<i class="bi bi-server me-1"></i>
+                                        {% elif asset.asset_type == 'Database' %}<i class="bi bi-database me-1"></i>
+                                        {% elif asset.asset_type == 'Network' %}<i class="bi bi-router me-1"></i>
+                                        {% elif asset.asset_type == 'Computer' %}<i class="bi bi-laptop me-1"></i>
+                                        {% elif asset.asset_type == 'Application' %}<i class="bi bi-window me-1"></i>
+                                        {% else %}<i class="bi bi-hdd me-1"></i>{% endif %}
+                                        {{ asset.asset_type }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="text-light small text-truncate" style="max-width: 250px;" title="{{ asset.description }}">
+                                        {{ asset.description or '<em class="text-muted">No description</em>'|safe }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2" style="width: 140px;">
+                                        <div class="progress flex-grow-1" style="height: 6px; background-color: #2a3a5f;">
+                                            <div class="progress-bar {% if asset.criticality >= 75 %}bg-danger{% elif asset.criticality >= 50 %}bg-warning{% else %}bg-info{% endif %}" 
+                                                 role="progressbar" style="width: {{ asset.criticality }}%;"></div>
+                                        </div>
+                                        <span class="fw-bold small">{{ asset.criticality }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary rounded-pill">{{ asset.vuln_count }}</span>
+                                </td>
+                                <td>
+                                    {% if asset.latest_risk_score is not none %}
+                                        {% set meta = get_risk_meta(asset.latest_risk_level) %}
+                                        <span class="badge-risk {{ 'badge-risk-critical' if asset.latest_risk_level == 'Critical' else ('badge-risk-high' if asset.latest_risk_level == 'High' else ('badge-risk-medium' if asset.latest_risk_level == 'Medium' else 'badge-risk-low')) }}">
+                                            {{ asset.latest_risk_score }}/100 [{{ asset.latest_risk_level }}]
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-dark text-muted border border-secondary">Not Assessed</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-info" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editAssetModal{{ asset.id }}" 
+                                                title="Edit Asset">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteAssetModal{{ asset.id }}" 
+                                                title="Delete Asset">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- EDIT ASSET MODAL -->
+                            <div class="modal fade" id="editAssetModal{{ asset.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content modal-cyber">
+                                        <div class="modal-header modal-cyber-header">
+                                            <h5 class="modal-title"><i class="bi bi-pencil-square text-info me-2"></i>Edit Asset #{{ asset.id }}</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form method="POST" action="{{ url_for('edit_asset', asset_id=asset.id) }}">
+                                            <div class="modal-body p-4">
+                                                <div class="mb-3">
+                                                    <label class="form-cyber-label">Asset Name <span class="text-danger">*</span></label>
+                                                    <input type="text" name="name" class="form-control form-cyber-control" required value="{{ asset.name }}">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-cyber-label">Asset Type <span class="text-danger">*</span></label>
+                                                    <select name="asset_type" class="form-select form-cyber-control" required>
+                                                        {% for atype in asset_types %}
+                                                        <option value="{{ atype }}" {% if asset.asset_type == atype %}selected{% endif %}>{{ atype }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-cyber-label">Asset Criticality (A) [0 - 100] <span class="text-danger">*</span></label>
+                                                    <div class="input-group">
+                                                        <input type="number" name="criticality" min="0" max="100" step="0.1" class="form-control form-cyber-control" required value="{{ asset.criticality }}">
+                                                        <span class="input-group-text bg-dark border-secondary text-muted">/100</span>
+                                                    </div>
+                                                    <small class="text-muted">Higher value indicates mission-critical system.</small>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-cyber-label">Description</label>
+                                                    <textarea name="description" class="form-control form-cyber-control" rows="3">{{ asset.description }}</textarea>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer modal-cyber-footer">
+                                                <button type="button" class="btn btn-cyber-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <button type="submit" class="btn btn-cyber-primary">Save Changes</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- DELETE CONFIRMATION MODAL -->
+                            <div class="modal fade" id="deleteAssetModal{{ asset.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content modal-cyber border-danger">
+                                        <div class="modal-header modal-cyber-header bg-danger text-white">
+                                            <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirm Asset Deletion</h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body p-4 text-center">
+                                            <i class="bi bi-trash3-fill text-danger fs-1 d-block mb-3"></i>
+                                            <h5 class="text-white mb-2">Delete Asset "{{ asset.name }}"?</h5>
+                                            <p class="text-muted small">
+                                                Warning: This action will permanently remove this asset and cascade delete all its associated vulnerabilities and assessments from SQLite database.
+                                            </p>
+                                        </div>
+                                        <div class="modal-footer modal-cyber-footer justify-content-center">
+                                            <button type="button" class="btn btn-cyber-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <form method="POST" action="{{ url_for('remove_asset', asset_id=asset.id) }}">
+                                                <button type="submit" class="btn btn-danger">Confirm Delete</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="bi bi-hdd-slash fs-1 d-block mb-2"></i>
+                                    <h5>No assets found matching the criteria.</h5>
+                                    <p class="small">Click "Register New Asset" above to add your first cybersecurity asset.</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- REGISTER NEW ASSET MODAL -->
+<div class="modal fade" id="addAssetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-cyber">
+            <div class="modal-header modal-cyber-header">
+                <h5 class="modal-title"><i class="bi bi-shield-plus text-cyan me-2" style="color: #00f5d4;"></i>Register New Asset</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_asset') }}">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-cyber-label">Asset Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control form-cyber-control" placeholder="e.g. Server A, Customer-DB-Primary" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-cyber-label">Asset Type <span class="text-danger">*</span></label>
+                        <select name="asset_type" class="form-select form-cyber-control" required>
+                            <option value="" disabled selected>-- Select Asset Classification --</option>
+                            <option value="Server">Server</option>
+                            <option value="Computer">Computer</option>
+                            <option value="Network">Network</option>
+                            <option value="Database">Database</option>
+                            <option value="Application">Application</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-cyber-label">Asset Criticality (A) [0 - 100] <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" name="criticality" min="0" max="100" step="0.1" class="form-control form-cyber-control" placeholder="e.g. 90" required>
+                            <span class="input-group-text bg-dark border-secondary text-muted">/100</span>
+                        </div>
+                        <small class="text-muted">Represents the organizational importance of the asset (0 = negligible, 100 = mission critical).</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-cyber-label">Asset Description</label>
+                        <textarea name="description" class="form-control form-cyber-control" rows="3" placeholder="Provide host IP, operational role, or data classification..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer modal-cyber-footer">
+                    <button type="button" class="btn btn-cyber-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-cyber-primary"><i class="bi bi-save me-1"></i> Register Asset</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

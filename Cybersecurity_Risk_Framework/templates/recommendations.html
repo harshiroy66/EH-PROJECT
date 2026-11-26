@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Decision Support & Recommendations | Cybersecurity Framework{% endblock %}
+{% block page_title %}Module 3: Decision Support & Security Recommendations{% endblock %}
+{% block breadcrumb %}Recommendations{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+    <!-- Recommendation Rules Reference Banner -->
+    <div class="card-cyber mb-4">
+        <div class="card-cyber-body py-3">
+            <div class="row g-3 align-items-center justify-content-between">
+                <div class="col-lg-8 col-12">
+                    <h5 class="text-white fw-bold mb-1">
+                        <i class="bi bi-shield-check text-cyan" style="color: #00f5d4;"></i> Automated Decision Support Engine
+                    </h5>
+                    <p class="text-muted small mb-0">
+                        Dynamic remediation playbooks triggered automatically by risk classification thresholds. Prioritize remediation based on assigned compliance urgency.
+                    </p>
+                </div>
+                <div class="col-lg-4 col-12 text-lg-end">
+                    <a href="{{ url_for('download_all_audit_pdf') }}" class="btn btn-cyber-primary btn-sm">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> Download Executive Audit PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Toolbar -->
+    <div class="card-cyber mb-4">
+        <div class="card-cyber-body py-2">
+            <form method="GET" action="{{ url_for('recommendations') }}" class="row g-2 align-items-center">
+                <div class="col-md-3 col-6">
+                    <select name="priority" class="form-select form-cyber-control form-select-sm" onchange="this.form.submit()">
+                        <option value="">All Priorities</option>
+                        <option value="Critical" {% if priority_filter == 'Critical' %}selected{% endif %}>Critical Priority</option>
+                        <option value="High" {% if priority_filter == 'High' %}selected{% endif %}>High Priority</option>
+                        <option value="Medium" {% if priority_filter == 'Medium' %}selected{% endif %}>Medium Priority</option>
+                        <option value="Low" {% if priority_filter == 'Low' %}selected{% endif %}>Low Priority</option>
+                    </select>
+                </div>
+                <div class="col-md-3 col-6">
+                    <select name="status" class="form-select form-cyber-control form-select-sm" onchange="this.form.submit()">
+                        <option value="">All Implementation Statuses</option>
+                        <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+                        <option value="In Progress" {% if status_filter == 'In Progress' %}selected{% endif %}>In Progress</option>
+                        <option value="Implemented" {% if status_filter == 'Implemented' %}selected{% endif %}>Implemented</option>
+                    </select>
+                </div>
+                <div class="col-md-4 col-8">
+                    <input type="text" class="form-control form-cyber-control form-control-sm" placeholder="Filter recommendations..." data-table-filter="recsTable">
+                </div>
+                <div class="col-md-2 col-4">
+                    {% if status_filter or priority_filter %}
+                    <a href="{{ url_for('recommendations') }}" class="btn btn-outline-secondary btn-sm w-100">Reset</a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Recommendations Cards & Table -->
+    <div class="card-cyber">
+        <div class="card-cyber-header">
+            <h5><i class="bi bi-list-check text-warning"></i> Actionable Security Recommendations ({{ recommendations|length }})</h5>
+            <span class="badge bg-secondary">Decision Rules Engine</span>
+        </div>
+        <div class="card-cyber-body p-0">
+            <div class="table-responsive">
+                <table class="table table-cyber mb-0 align-middle" id="recsTable">
+                    <thead>
+                        <tr>
+                            <th>Priority</th>
+                            <th>Target Asset</th>
+                            <th>Risk Score</th>
+                            <th>Actionable Recommendation & Guidance</th>
+                            <th>Status</th>
+                            <th class="text-end">Remediation Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if recommendations %}
+                            {% for rec in recommendations %}
+                            <tr>
+                                <td>
+                                    {% if rec.priority == 'Critical' %}
+                                        <span class="badge-risk badge-risk-critical"><i class="bi bi-lightning-fill"></i> Critical</span>
+                                    {% elif rec.priority == 'High' %}
+                                        <span class="badge-risk badge-risk-high"><i class="bi bi-exclamation-triangle"></i> High</span>
+                                    {% elif rec.priority == 'Medium' %}
+                                        <span class="badge-risk badge-risk-medium"><i class="bi bi-clock"></i> Medium</span>
+                                    {% else %}
+                                        <span class="badge-risk badge-risk-low"><i class="bi bi-check2"></i> Low</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-white">{{ rec.asset_name }}</div>
+                                    <small class="text-muted">{{ rec.asset_type }}</small>
+                                </td>
+                                <td>
+                                    <span class="fw-bold">{{ rec.risk_score }}</span>
+                                    <small class="text-muted">/100</small>
+                                </td>
+                                <td>
+                                    <div class="text-light fw-medium mb-1">
+                                        {{ rec.recommendation_text }}
+                                    </div>
+                                    <small class="text-secondary">
+                                        Assessment #{{ rec.assessment_id }} &bull; Vulnerability: {{ rec.vulnerability_name or 'Baseline Assessment' }}
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge {% if rec.status == 'Implemented' %}bg-success{% elif rec.status == 'In Progress' %}bg-warning text-dark{% else %}bg-secondary text-light{% endif %}">
+                                        {{ rec.status }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <!-- Status update quick dropdown -->
+                                    <div class="dropdown d-inline-block">
+                                        <button class="btn btn-sm btn-outline-info dropdown-toggle py-1 px-2" type="button" data-bs-toggle="dropdown">
+                                            Update Status
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end">
+                                            <li>
+                                                <form method="POST" action="{{ url_for('change_recommendation_status', rec_id=rec.id) }}">
+                                                    <input type="hidden" name="status" value="Pending">
+                                                    <button type="submit" class="dropdown-item text-secondary"><i class="bi bi-hourglass me-2"></i> Pending</button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form method="POST" action="{{ url_for('change_recommendation_status', rec_id=rec.id) }}">
+                                                    <input type="hidden" name="status" value="In Progress">
+                                                    <button type="submit" class="dropdown-item text-warning"><i class="bi bi-play-circle me-2"></i> In Progress</button>
+                                                </form>
+                                            </li>
+                                            <li>
+                                                <form method="POST" action="{{ url_for('change_recommendation_status', rec_id=rec.id) }}">
+                                                    <input type="hidden" name="status" value="Implemented">
+                                                    <button type="submit" class="dropdown-item text-success"><i class="bi bi-check2-circle me-2"></i> Implemented</button>
+                                                </form>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <a href="{{ url_for('report_view', assessment_id=rec.assessment_id) }}" class="btn btn-sm btn-outline-secondary py-1 px-2 ms-1" title="Assessment Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-clipboard2-check fs-1 d-block mb-2 text-success"></i>
+                                    <h5>No recommendations match the filter criteria.</h5>
+                                    <p class="small">All systems aligned or filters too restrictive.</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

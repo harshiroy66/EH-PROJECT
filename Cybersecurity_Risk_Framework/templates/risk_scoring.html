@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}Risk Scoring Engine | Automated Cybersecurity Assessment{% endblock %}
+{% block page_title %}Module 2: Automated Risk Scoring & Classification{% endblock %}
+{% block breadcrumb %}Risk Scoring{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+    <!-- FORMULA EXPLANATION CALLOUT BANNER -->
+    <div class="formula-box mb-4">
+        <div class="row align-items-center">
+            <div class="col-lg-8 col-12">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-info text-dark fw-bold">Official Risk Model</span>
+                    <h5 class="text-white mb-0 fw-bold">Multi-Factor Weighted Risk Scoring Algorithm</h5>
+                </div>
+                <div class="formula-math mb-2">
+                    R = 0.40(V) + 0.25(A) + 0.20(E) + 0.15(S)
+                </div>
+                <div class="text-muted small">
+                    <strong>V</strong> = Vulnerability Severity (40%) &nbsp;|&nbsp; 
+                    <strong>A</strong> = Asset Criticality (25%) &nbsp;|&nbsp; 
+                    <strong>E</strong> = Exposure Level (20%) &nbsp;|&nbsp; 
+                    <strong>S</strong> = Security Event Severity (15%)
+                </div>
+            </div>
+            <div class="col-lg-4 col-12 mt-3 mt-lg-0 text-lg-end">
+                <div class="d-flex justify-content-lg-end gap-1 flex-wrap">
+                    <span class="badge badge-risk badge-risk-low">0-24 Low</span>
+                    <span class="badge badge-risk badge-risk-medium">25-49 Medium</span>
+                    <span class="badge badge-risk badge-risk-high">50-74 High</span>
+                    <span class="badge badge-risk badge-risk-critical">75-100 Critical</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN TWO-COLUMN WORKBENCH: CALCULATOR + ASSESSMENT LIST -->
+    <div class="row g-4 mb-4">
+        
+        <!-- LEFT: INTERACTIVE ASSESSMENT CALCULATOR FORM -->
+        <div class="col-xl-5 col-lg-6 col-12">
+            <div class="card-cyber h-100">
+                <div class="card-cyber-header">
+                    <h5><i class="bi bi-cpu-fill text-cyan" style="color: #00f5d4;"></i> Run Risk Assessment</h5>
+                    <span class="badge bg-dark border border-secondary text-info">Live Scoring</span>
+                </div>
+                <div class="card-cyber-body">
+                    <form method="POST" action="{{ url_for('calculate_and_save_risk') }}" id="assessmentForm">
+                        
+                        <!-- 1. Select Asset -->
+                        <div class="mb-3">
+                            <label class="form-cyber-label">1. Target Asset <span class="text-danger">*</span></label>
+                            <select name="asset_id" id="select-asset" class="form-select form-cyber-control" required onchange="onAssetSelected(this)">
+                                <option value="" disabled {% if not selected_asset %}selected{% endif %}>-- Select Target Asset --</option>
+                                {% for a in assets %}
+                                <option value="{{ a.id }}" 
+                                        data-criticality="{{ a.criticality }}" 
+                                        data-type="{{ a.asset_type }}"
+                                        {% if selected_asset == a.id %}selected{% endif %}>
+                                    {{ a.name }} ({{ a.asset_type }} | Crit: {{ a.criticality }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- 2. Select Vulnerability (Optional link) -->
+                        <div class="mb-3">
+                            <label class="form-cyber-label">2. Associated Vulnerability (Optional)</label>
+                            <select name="vulnerability_id" id="select-vuln" class="form-select form-cyber-control" onchange="onVulnSelected(this)">
+                                <option value="">-- Direct Input / General Assessment --</option>
+                                {% for v in vulnerabilities %}
+                                <option value="{{ v.id }}" 
+                                        data-asset-id="{{ v.asset_id }}" 
+                                        data-severity="{{ v.severity }}">
+                                    [{{ v.asset_name }}] {{ v.name }} (Sev: {{ v.severity }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- 3. Vulnerability Severity (V) -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-cyber-label mb-0">Vulnerability Severity (V) [40% Weight] <span class="text-danger">*</span></label>
+                                <span class="badge bg-secondary font-monospace" id="v-val-badge">80</span>
+                            </div>
+                            <div class="row g-2 align-items-center">
+                                <div class="col-8">
+                                    <input type="range" class="form-range" id="range-vuln-severity" min="0" max="100" step="1" value="80">
+                                </div>
+                                <div class="col-4">
+                                    <input type="number" name="vulnerability_severity" id="input-vuln-severity" min="0" max="100" step="0.1" class="form-control form-cyber-control" value="80" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Asset Criticality (A) -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-cyber-label mb-0">Asset Criticality (A) [25% Weight] <span class="text-danger">*</span></label>
+                                <span class="badge bg-secondary font-monospace" id="a-val-badge">90</span>
+                            </div>
+                            <div class="row g-2 align-items-center">
+                                <div class="col-8">
+                                    <input type="range" class="form-range" id="range-asset-criticality" min="0" max="100" step="1" value="90">
+                                </div>
+                                <div class="col-4">
+                                    <input type="number" name="asset_criticality" id="input-asset-criticality" min="0" max="100" step="0.1" class="form-control form-cyber-control" value="90" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 5. Exposure Level (E) -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-cyber-label mb-0">Exposure Level (E) [20% Weight] <span class="text-danger">*</span></label>
+                                <span class="badge bg-secondary font-monospace" id="e-val-badge">70</span>
+                            </div>
+                            <div class="row g-2 align-items-center">
+                                <div class="col-8">
+                                    <input type="range" class="form-range" id="range-exposure" min="0" max="100" step="1" value="70">
+                                </div>
+                                <div class="col-4">
+                                    <input type="number" name="exposure" id="input-exposure" min="0" max="100" step="0.1" class="form-control form-cyber-control" value="70" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 6. Security Event Severity (S) -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-cyber-label mb-0">Security Event Severity (S) [15% Weight] <span class="text-danger">*</span></label>
+                                <span class="badge bg-secondary font-monospace" id="s-val-badge">60</span>
+                            </div>
+                            <div class="row g-2 align-items-center">
+                                <div class="col-8">
+                                    <input type="range" class="form-range" id="range-event-severity" min="0" max="100" step="1" value="60">
+                                </div>
+                                <div class="col-4">
+                                    <input type="number" name="security_event_severity" id="input-event-severity" min="0" max="100" step="0.1" class="form-control form-cyber-control" value="60" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 7. Assessment Notes -->
+                        <div class="mb-3">
+                            <label class="form-cyber-label">Assessment Context / Audit Notes</label>
+                            <input type="text" name="notes" class="form-control form-cyber-control" placeholder="e.g. Server A penetration test validation">
+                        </div>
+
+                        <!-- LIVE SCORE PREVIEW DISPLAY -->
+                        <div class="p-3 my-3 rounded-3" style="background: rgba(11, 19, 43, 0.8); border: 1px dashed #2a3a5f;">
+                            <div class="row align-items-center text-center">
+                                <div class="col-5">
+                                    <div class="score-meter-circle critical" id="preview-score-meter">
+                                        <div class="score-num" id="preview-score-val">77.5</div>
+                                        <div class="score-label text-danger" id="preview-score-tier">Critical Risk</div>
+                                    </div>
+                                </div>
+                                <div class="col-7 text-start">
+                                    <small class="text-muted d-block mb-1">Real-time Calculation:</small>
+                                    <div class="font-monospace small text-info mb-2" id="preview-formula-math" style="word-break: break-all;">
+                                        R = 0.40(80) + 0.25(90) + 0.20(70) + 0.15(60) = 77.5
+                                    </div>
+                                    <div class="small text-muted">
+                                        <i class="bi bi-info-circle text-cyan"></i> Calculated by Python backend upon submission.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-cyber-primary w-100 py-2 fs-6">
+                            <i class="bi bi-shield-check me-2"></i> Compute & Commit Assessment
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: PRIORITIZED RISK ASSESSMENTS TABLE -->
+        <div class="col-xl-7 col-lg-6 col-12">
+            <div class="card-cyber h-100 d-flex flex-column">
+                <div class="card-cyber-header flex-wrap gap-2">
+                    <h5><i class="bi bi-list-stars text-info"></i> Completed Assessments ({{ assessments|length }})</h5>
+
+                    <!-- Filter & Sort Toolbar -->
+                    <form method="GET" action="{{ url_for('risk_scoring') }}" class="d-flex align-items-center gap-2 flex-wrap">
+                        <select name="risk_level" class="form-select form-cyber-control form-select-sm" onchange="this.form.submit()" style="width: 140px;">
+                            <option value="">All Risk Tiers</option>
+                            <option value="Critical" {% if selected_level == 'Critical' %}selected{% endif %}>Critical Risk</option>
+                            <option value="High" {% if selected_level == 'High' %}selected{% endif %}>High Risk</option>
+                            <option value="Medium" {% if selected_level == 'Medium' %}selected{% endif %}>Medium Risk</option>
+                            <option value="Low" {% if selected_level == 'Low' %}selected{% endif %}>Low Risk</option>
+                        </select>
+                        <select name="sort_by" class="form-select form-cyber-control form-select-sm" onchange="this.form.submit()" style="width: 160px;">
+                            <option value="risk_desc" {% if selected_sort == 'risk_desc' %}selected{% endif %}>Highest Risk First</option>
+                            <option value="risk_asc" {% if selected_sort == 'risk_asc' %}selected{% endif %}>Lowest Risk First</option>
+                            <option value="date_desc" {% if selected_sort == 'date_desc' %}selected{% endif %}>Newest Assessment</option>
+                        </select>
+                    </form>
+                </div>
+
+                <div class="card-cyber-body p-0 flex-grow-1">
+                    <div class="table-responsive">
+                        <table class="table table-cyber mb-0 align-middle">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Asset & Vulnerability</th>
+                                    <th>Formula Breakdown</th>
+                                    <th>Score</th>
+                                    <th>Classification</th>
+                                    <th>Delta</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if assessments %}
+                                    {% for asm in assessments %}
+                                    <tr>
+                                        <td class="text-muted font-monospace">#{{ asm.id }}</td>
+                                        <td>
+                                            <div class="fw-bold text-white">{{ asm.asset_name }}</div>
+                                            <small class="text-muted text-truncate d-block" style="max-width: 170px;">
+                                                {{ asm.vulnerability_name or 'General Assessment' }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <small class="font-monospace text-secondary d-block">
+                                                0.40({{ asm.vulnerability_severity|int }}) + 0.25({{ asm.asset_criticality|int }}) + 0.20({{ asm.exposure|int }}) + 0.15({{ asm.security_event_severity|int }})
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <span class="fw-bold fs-6">{{ asm.risk_score }}</span>
+                                            <small class="text-muted">/100</small>
+                                        </td>
+                                        <td>
+                                            {% if asm.risk_level == 'Critical' %}
+                                                <span class="badge-risk badge-risk-critical"><i class="bi bi-radioactive"></i> Critical</span>
+                                            {% elif asm.risk_level == 'High' %}
+                                                <span class="badge-risk badge-risk-high"><i class="bi bi-exclamation-triangle"></i> High</span>
+                                            {% elif asm.risk_level == 'Medium' %}
+                                                <span class="badge-risk badge-risk-medium"><i class="bi bi-shield-exclamation"></i> Medium</span>
+                                            {% else %}
+                                                <span class="badge-risk badge-risk-low"><i class="bi bi-shield-check"></i> Low</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if asm.trend == 'Decreased' %}
+                                                <span class="badge badge-trend-decreased" title="Risk Decreased"><i class="bi bi-arrow-down"></i> -{{ asm.score_difference|abs }}</span>
+                                            {% elif asm.trend == 'Increased' %}
+                                                <span class="badge badge-trend-increased" title="Risk Increased"><i class="bi bi-arrow-up"></i> +{{ asm.score_difference|abs }}</span>
+                                            {% elif asm.trend == 'Unchanged' %}
+                                                <span class="badge badge-trend-unchanged" title="Risk Unchanged"><i class="bi bi-dash"></i> 0</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary text-light">Initial</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">
+                                            <a href="{{ url_for('report_view', assessment_id=asm.id) }}" class="btn btn-sm btn-outline-info py-0 px-2" title="View Full Report">
+                                                <i class="bi bi-file-text"></i>
+                                            </a>
+                                            <a href="{{ url_for('download_report_pdf', assessment_id=asm.id) }}" class="btn btn-sm btn-outline-danger py-0 px-2" title="Download PDF">
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            <i class="bi bi-calculator fs-1 d-block mb-2"></i>
+                                            <h5>No assessments found.</h5>
+                                            <p class="small">Use the form on the left to calculate your first score.</p>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function onAssetSelected(select) {
+        const option = select.options[select.selectedIndex];
+        const crit = option.dataset.criticality;
+        if (crit !== undefined) {
+            const aInput = document.getElementById("input-asset-criticality");
+            const aRange = document.getElementById("range-asset-criticality");
+            if (aInput) aInput.value = crit;
+            if (aRange) aRange.value = crit;
+            aInput.dispatchEvent(new Event("input"));
+        }
+    }
+
+    function onVulnSelected(select) {
+        const option = select.options[select.selectedIndex];
+        const sev = option.dataset.severity;
+        const assetId = option.dataset.assetId;
+        if (sev !== undefined) {
+            const vInput = document.getElementById("input-vuln-severity");
+            const vRange = document.getElementById("range-vuln-severity");
+            if (vInput) vInput.value = sev;
+            if (vRange) vRange.value = sev;
+            vInput.dispatchEvent(new Event("input"));
+        }
+        if (assetId) {
+            const assetSelect = document.getElementById("select-asset");
+            if (assetSelect) {
+                assetSelect.value = assetId;
+                onAssetSelected(assetSelect);
+            }
+        }
+    }
+</script>
+{% endblock %}
